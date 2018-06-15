@@ -56,6 +56,9 @@ class Authenticator(dns_common.DNSAuthenticator):
         self._client.del_record(domain_name=domain, type='TXT', name=validation_name, data=validation)
 
 
+class ZoneNotFoundError(Exception):
+    pass
+
 class ConoHaDNSAPIError(Exception):
     pass
 
@@ -116,12 +119,13 @@ class _ConoHaDNSv1():
         pass
 
     def get_domains(self, name=None):
-        url = '/v1/domains' + \
-            ((
-                '?' + \
-                parse.urlencode((('name', name),)) + \
-                '.' if name[-1] != '.' else ''
-            ) if name is not None else '')
+        # name must be FQDN (end with dot)
+        url = '/v1/domains'
+        if name is not None:
+            query = {
+                'name': name
+            }
+            url = '{url}?{query}'.format(url=url, query=parse.urlencode(query))
         res = self._request('GET', url)
         if res.status >= 400:
             raise ConoHaDNSAPIError(res.data)
@@ -129,5 +133,11 @@ class _ConoHaDNSv1():
         return json.loads(res.data.decode('utf-8'))['domains']
 
     def _find_domain_id(self, name):
-        domains = self.get_domains(name)
+        fqdn = name if name[-1] == '.' else name + '.'
+        domains = self.get_domains(fqdn)
+        if len(domains) == 0:
+            parts = fqdn.split('.')
+            if len(parts) == 2:
+                raise ZoneNotFoundError
+            return self._find_domain_id('.'.join(parts[1:]))
         return domains[0]['id']
