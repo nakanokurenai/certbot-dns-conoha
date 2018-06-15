@@ -15,8 +15,7 @@ from six.moves.urllib import parse
 class Authenticator(dns_common.DNSAuthenticator):
     """DNS Authenticator for ConoHa DNS v1."""
 
-    description = (
-        'DNS Authenticator for ConoHa DNS v1')
+    description = ('DNS Authenticator for ConoHa DNS v1')
 
     def __init__(self, *args, **kwargs):
         super(Authenticator, self).__init__(*args, **kwargs)
@@ -30,28 +29,30 @@ class Authenticator(dns_common.DNSAuthenticator):
     def _client(self):
         return _ConoHaDNSv1(
             endpoint=self.credentials.conf('dns-endpoint'),
-            token=self.credentials.conf('auth-token')
-        )
+            token=self.credentials.conf('auth-token'))
 
     @classmethod
     def add_parser_arguments(cls, add_argument):
-        super(Authenticator, cls).add_parser_arguments(add_argument, default_propagation_seconds=5)
+        super(Authenticator, cls).add_parser_arguments(
+            add_argument, default_propagation_seconds=5)
         add_argument('credentials', help='ConoHa credentials INI file.')
 
     def _setup_credentials(self):
         self.credentials = self._configure_credentials(
-            'credentials',
-            'ConoHa credentials INI file',
-            {
-                'dns-endpoint': 'DNS Service endpoint, shown in API Information page',
-                'auth-token': (
-                    'Token insert to X-Auth-Token header, get instruction from '
-                    'https://www.conoha.jp/guide/apitokens.php')
-            }
-        )
+            'credentials', 'ConoHa credentials INI file', {
+                'dns-endpoint':
+                'DNS Service endpoint, shown in API Information page',
+                'auth-token':
+                ('Token insert to X-Auth-Token header, get instruction from '
+                 'https://www.conoha.jp/guide/apitokens.php')
+            })
 
     def _perform(self, domain, validation_name, validation):
-        domain = self._client.add_record(domain_name=domain, type='TXT', name=validation_name, data=validation)
+        domain = self._client.add_record(
+            domain_name=domain,
+            type='TXT',
+            name=validation_name,
+            data=validation)
         # FIXME: non thread safety
         self._record_ids[validation_name + validation] = domain['id']
 
@@ -74,9 +75,7 @@ class _ConoHaDNSv1():
     def __init__(self, endpoint, token):
         self._endpoint = endpoint
         self._http = urllib3.PoolManager(
-            cert_reqs='CERT_REQUIRED',
-            ca_certs=certifi.where()
-        )
+            cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
         self._token = token
 
     @staticmethod
@@ -98,9 +97,12 @@ class _ConoHaDNSv1():
             domain_name = kwargs.get('domain_name', None)
             domain_id = kwargs.get('domain_id', None)
             if domain_name is None and domain_id is None:
-                raise ValueError('You must specify "domain_name" or "domain_id".')
+                raise ValueError(
+                    'You must specify "domain_name" or "domain_id".')
             if domain_name is not None and domain_id is not None:
-                raise ValueError('You must not specify "domain_name" and "domain_id" at the same time.')
+                raise ValueError(
+                    'You must not specify "domain_name" and "domain_id" at the same time.'
+                )
             record_type = kwargs['type']
             record_name = kwargs['name']
             record_data = kwargs['data']
@@ -119,10 +121,7 @@ class _ConoHaDNSv1():
             'POST',
             '/v1/domains/{id}/records'.format(id=domain_id),
             body=json.dumps(data).encode('utf-8'),
-            headers={
-                'Content-Type': 'application/json'
-            }
-        )
+            headers={'Content-Type': 'application/json'})
 
         return json.loads(res.data.decode('utf-8'))
 
@@ -131,9 +130,12 @@ class _ConoHaDNSv1():
             domain_name = kwargs.get('domain_name', None)
             domain_id = kwargs.get('domain_id', None)
             if domain_name is None and domain_id is None:
-                raise ValueError('You must specify "domain_name" or "domain_id".')
+                raise ValueError(
+                    'You must specify "domain_name" or "domain_id".')
             if domain_name is not None and domain_id is not None:
-                raise ValueError('You must not specify "domain_name" and "domain_id" at the same time.')
+                raise ValueError(
+                    'You must not specify "domain_name" and "domain_id" at the same time.'
+                )
             record_id = kwargs['id']
         except KeyError as e:
             raise ValueError(e.message)
@@ -142,20 +144,14 @@ class _ConoHaDNSv1():
             domain_id = self._find_domain_id(name=domain_name)
 
         self._request(
-            'DELETE',
-            '/v1/domains/{domain_id}/records/{record_id}'.format(
-                domain_id=domain_id,
-                record_id=record_id
-            )
-        )
+            'DELETE', '/v1/domains/{domain_id}/records/{record_id}'.format(
+                domain_id=domain_id, record_id=record_id))
 
     def get_domains(self, name=None):
         # name must be FQDN (end with dot)
         url = '/v1/domains'
         if name is not None:
-            query = {
-                'name': name
-            }
+            query = {'name': name}
             url = '{url}?{query}'.format(url=url, query=parse.urlencode(query))
         res = self._request('GET', url)
         return json.loads(res.data.decode('utf-8'))['domains']
