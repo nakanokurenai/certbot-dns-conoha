@@ -7,6 +7,9 @@ name = "pypi"
 
 [packages]
 certbot = "*"
+"urllib3" = "*"
+six = "*"
+certifi = "*"
 
 [requires]
 python_version = "2.7"
