@@ -21,6 +21,7 @@ class Authenticator(dns_common.DNSAuthenticator):
     def __init__(self, *args, **kwargs):
         super(Authenticator, self).__init__(*args, **kwargs)
         self.credentials = None
+        self._record_ids = {}
 
     def more_info(self):
         return 'hogehuga'
@@ -34,7 +35,7 @@ class Authenticator(dns_common.DNSAuthenticator):
 
     @classmethod
     def add_parser_arguments(cls, add_argument):
-        super(Authenticator, cls).add_parser_arguments(add_argument, default_propagation_seconds=30)
+        super(Authenticator, cls).add_parser_arguments(add_argument, default_propagation_seconds=5)
         add_argument('credentials', help='ConoHa credentials INI file.')
 
     def _setup_credentials(self):
@@ -50,17 +51,24 @@ class Authenticator(dns_common.DNSAuthenticator):
         )
 
     def _perform(self, domain, validation_name, validation):
-        self._client.add_record(domain_name=domain, type='TXT', name=validation_name, data=validation)
+        domain = self._client.add_record(domain_name=domain, type='TXT', name=validation_name, data=validation)
+        # FIXME: non thread safety
+        self._record_ids[validation_name + validation] = domain['id']
 
     def _cleanup(self, domain, validation_name, validation):
-        self._client.del_record(domain_name=domain, type='TXT', name=validation_name, data=validation)
+        # FIXME: non thread safety
+        # TODO: get record_id from GET /records API
+        record_id = self._record_ids[validation_name + validation]
+        self._client.del_record(domain_name=domain, id=record_id)
 
 
 class ZoneNotFoundError(Exception):
     pass
 
+
 class ConoHaDNSAPIError(Exception):
     pass
+
 
 class _ConoHaDNSv1():
     def __init__(self, endpoint, token):
@@ -71,13 +79,19 @@ class _ConoHaDNSv1():
         )
         self._token = token
 
+    @staticmethod
+    def _to_fqdn(name):
+        return name if name[-1] == '.' else name + '.'
+
     def _request(self, method, url, **kwargs):
         "urllib3.request with context"
         url = parse.urljoin(self._endpoint, url)
         headers = kwargs.pop('headers', {})
         headers['X-Auth-Token'] = self._token
-        return self._http.request(method, url, headers=headers, **kwargs)
-
+        res = self._http.request(method, url, headers=headers, **kwargs)
+        if res.status >= 400:
+            raise ConoHaDNSAPIError(res.data)
+        return res
 
     def add_record(self, *_, **kwargs):
         try:
@@ -97,7 +111,7 @@ class _ConoHaDNSv1():
             domain_id = self._find_domain_id(name=domain_name)
 
         data = {
-            'name': '{}.'.format(record_name),
+            'name': self._to_fqdn(record_name),
             'type': record_type,
             'data': record_data
         }
@@ -110,13 +124,30 @@ class _ConoHaDNSv1():
             }
         )
 
-        if res.status >= 400:
-            raise ConoHaDNSAPIError(res.data)
+        return json.loads(res.data.decode('utf-8'))
 
     def del_record(self, *args, **kwargs):
-        # FIXME
-        # TODO: implement
-        pass
+        try:
+            domain_name = kwargs.get('domain_name', None)
+            domain_id = kwargs.get('domain_id', None)
+            if domain_name is None and domain_id is None:
+                raise ValueError('You must specify "domain_name" or "domain_id".')
+            if domain_name is not None and domain_id is not None:
+                raise ValueError('You must not specify "domain_name" and "domain_id" at the same time.')
+            record_id = kwargs['id']
+        except KeyError as e:
+            raise ValueError(e.message)
+
+        if domain_name and domain_id is None:
+            domain_id = self._find_domain_id(name=domain_name)
+
+        self._request(
+            'DELETE',
+            '/v1/domains/{domain_id}/records/{record_id}'.format(
+                domain_id=domain_id,
+                record_id=record_id
+            )
+        )
 
     def get_domains(self, name=None):
         # name must be FQDN (end with dot)
@@ -127,13 +158,10 @@ class _ConoHaDNSv1():
             }
             url = '{url}?{query}'.format(url=url, query=parse.urlencode(query))
         res = self._request('GET', url)
-        if res.status >= 400:
-            raise ConoHaDNSAPIError(res.data)
-        import pdb; pdb.set_trace()
         return json.loads(res.data.decode('utf-8'))['domains']
 
     def _find_domain_id(self, name):
-        fqdn = name if name[-1] == '.' else name + '.'
+        fqdn = self._to_fqdn(name)
         domains = self.get_domains(fqdn)
         if len(domains) == 0:
             parts = fqdn.split('.')
