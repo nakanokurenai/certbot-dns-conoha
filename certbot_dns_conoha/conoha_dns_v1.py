@@ -13,12 +13,21 @@ class ConoHaDNSAPIError(Exception):
     pass
 
 
+class ConoHaDNSTokenInvalid(Exception):
+    pass
+
+
 class ConoHaDNSv1():
     def __init__(self, endpoint, token):
         self._endpoint = endpoint
         self._http = urllib3.PoolManager(
             cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
         self._token = token
+        # Check token
+        try:
+            self._request('GET', '/v1/domains')
+        except ConoHaDNSAPIError:
+            raise ConoHaDNSTokenInvalid('Token is invalid or expired.')
 
     @staticmethod
     def _to_fqdn(name):

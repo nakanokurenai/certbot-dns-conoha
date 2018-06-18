@@ -6,6 +6,9 @@ from certbot.plugins import dns_common
 from conoha_dns_v1 import ConoHaDNSv1 as _ConoHaDNSv1
 from threading import Lock
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 @zope.interface.implementer(interfaces.IAuthenticator)
 @zope.interface.provider(interfaces.IPluginFactory)
@@ -21,7 +24,7 @@ class Authenticator(dns_common.DNSAuthenticator):
         self._lock = Lock()
 
     def more_info(self):
-        return 'hogehuga'
+        return 'DNS Authenticator for ConoHa DNS v1.'
 
     @property
     def _client(self):
@@ -57,5 +60,8 @@ class Authenticator(dns_common.DNSAuthenticator):
     def _cleanup(self, domain, validation_name, validation):
         # TODO: get record_id from GET /records API
         with self._lock:
-            record_id = self._record_ids[validation_name + validation]
-        self._client.del_record(domain_name=domain, id=record_id)
+            try:
+                record_id = self._record_ids[validation_name + validation]
+                self._client.del_record(domain_name=domain, id=record_id)
+            except KeyError:
+                logger.info('No cleanup required for {} ({}).'.format(validation_name, validation))
