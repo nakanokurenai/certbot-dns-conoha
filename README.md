@@ -1,5 +1,4 @@
-# certbot-dns-conoha
-[![PyPI version](https://badge.fury.io/py/certbot-dns-conoha.svg)](https://pypi.org/project/certbot-dns-conoha)
+# certbot-dns-conoha [![][circleci-badge]][circleci] [![PyPI version][pypi-badge]][pypi]
 
 Get certificates by certbot with ConoHa DNS API v1
 
@@ -22,3 +21,8 @@ curl -X POST -H 'Accept: application/json' -d '{"auth": {"passwordCredentials": 
 cat tokens.json | jq '.access.token.id' | xargs -I% echo 'certbot_dns_conoha:dns_conoha_auth_token = %' >> credentials.ini
 cat tokens.json | jq '.access.serviceCatalog | map(select(.type == "dns")) | .[0].endpoints| map(select(.region == "tyo1")) | .[0] | .publicURL' | xargs -I% echo "certbot_dns_conoha:dns_conoha_dns_endpoint = %" >> credentials.ini
 ```
+
+[pypi]: https://pypi.org/project/certbot-dns-conoha/
+[pypi-badge]: https://badge.fury.io/py/certbot-dns-conoha.svg
+[circleci]: https://circleci.com/gh/nakanokurenai/certbot-dns-conoha/tree/master
+[circleci-badge]: https://circleci.com/gh/nakanokurenai/certbot-dns-conoha/tree/master.svg?style=svg
