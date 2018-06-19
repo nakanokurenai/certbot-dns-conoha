@@ -1,0 +1,15 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/lib
+    docker:
+      - image: circleci/python:3.6.1
+    steps:
+      - checkout
+      - run:
+          name: Installing dependencies
+          command: |
+            pipenv install --dev
+      - run:
+          name: Linting codes
+          command: yapf -r .
