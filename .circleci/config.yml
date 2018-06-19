@@ -13,4 +13,10 @@ jobs:
             sudo pipenv install --dev --system
       - run:
           name: Linting codes
-          command: yapf -r .
+          command: |
+            temp=$(mktemp)
+            if [ "$(yapf -dr . 2&>1 | tee $temp | wc -l)" != "0" ]
+            then
+              cat $temp
+              exit 1
+            fi
