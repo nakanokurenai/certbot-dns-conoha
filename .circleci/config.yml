@@ -15,8 +15,8 @@ jobs:
           name: Linting codes
           command: |
             temp=$(mktemp)
-            if [ "$(yapf -dr . 2&>1 | tee $temp | wc -l)" != "0" ]
+            if [ "$(yapf -dr . 2&>1 | tee $temp | wc -l | xargs)" = "0" ]
             then
-              cat $temp
-              exit 1
+              exit 0
             fi
+            cat $temp
