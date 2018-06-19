@@ -20,3 +20,4 @@ jobs:
               exit 0
             fi
             cat $temp
+            exit 1
