@@ -9,7 +9,8 @@ jobs:
       - run:
           name: Installing dependencies
           command: |
-            pipenv install --dev
+            pip install pipenv
+            pipenv install --dev --system
       - run:
           name: Linting codes
           command: yapf -r .
