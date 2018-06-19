@@ -64,4 +64,5 @@ class Authenticator(dns_common.DNSAuthenticator):
                 record_id = self._record_ids[validation_name + validation]
                 self._client.del_record(domain_name=domain, id=record_id)
             except KeyError:
-                logger.info('No cleanup required for {} ({}).'.format(validation_name, validation))
+                logger.info('No cleanup required for {} ({}).'.format(
+                    validation_name, validation))
