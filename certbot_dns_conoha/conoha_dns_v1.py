@@ -94,9 +94,9 @@ class ConoHaDNSv1():
         if domain_name and domain_id is None:
             domain_id = self._find_domain_id(name=domain_name)
 
-        self._request('DELETE',
-                      '/v1/domains/{domain_id}/records/{record_id}'.format(
-                          domain_id=domain_id, record_id=record_id))
+        self._request(
+            'DELETE', '/v1/domains/{domain_id}/records/{record_id}'.format(
+                domain_id=domain_id, record_id=record_id))
 
     def get_domains(self, name=None):
         # name must be FQDN (end with dot)
