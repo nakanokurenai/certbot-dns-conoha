@@ -1,4 +1,4 @@
-# certbot-dns-conoha [![][circleci-badge]][circleci] [![PyPI version][pypi-badge]][pypi] [![](docker-hub-build-status-badge)][docker-hub]
+# certbot-dns-conoha [![][circleci-badge]][circleci] [![PyPI version][pypi-badge]][pypi] [![][docker-hub-build-status-badge]][docker-hub]
 
 Get certificates by certbot with ConoHa DNS API v1
 
